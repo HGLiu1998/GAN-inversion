@@ -1,5 +1,5 @@
 # GAN-inversion
-Image2StyleGAN and Image2StyleGAN++ implementation
+Image2StyleGAN implementation
 
 # Instruction:
 * Using StyleGAN network and convert official pre-trained weights to pytorch version.
