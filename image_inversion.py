@@ -1,7 +1,7 @@
 import numpy as np 
 import matplotlib.pyplot as plt 
 import math 
-## ichao : replace this to the styleGAN you found
+## Replace this to the styleGAN you found
 from stylegan_layers import  G_mapping,G_synthesis
 
 import argparse
@@ -11,7 +11,6 @@ from collections import OrderedDict
 import torch.nn.functional as F
 from torchvision.utils import save_image
 from torchvision import models
-## from perceptual_model import VGG16_for_Perceptual
 import torch.optim as optim
 from torchvision import transforms
 from PIL import Image 
@@ -71,12 +70,7 @@ class VGG16_for_Perceptual(torch.nn.Module):
             self.slice2.add_module(str(x),vgg_pretrained_features[x])
         for x in range(n_layers[2],n_layers[3]):#relu4_2
             self.slice3.add_module(str(x),vgg_pretrained_features[x])
-        #for x in range(n_layers[3],n_layers[4]):#relu4_2
-        #    self.slice4.add_module(str(x),vgg_pretrained_features[x])
-        #for x in range(n_layers[4],n_layers[5]):#relu4_2
-        #    self.slice5.add_module(str(x),vgg_pretrained_features[x])
-        #for x in range(n_layers[5],n_layers[6]):#relu4_2
-        #    self.slice6.add_module(str(x),vgg_pretrained_features[x])
+        
         if not requires_grad:
             for param in self.parameters():
                 param.requires_grad=False
@@ -86,9 +80,7 @@ class VGG16_for_Perceptual(torch.nn.Module):
         h1=self.slice1(h0)
         h2=self.slice2(h1)
         h3=self.slice3(h2)
-        #h4=self.slice4(h3)
-        #h5=self.slice5(h4)
-        #h6=self.slice6(h5)
+
 
         return h0,h1,h2,h3
 
@@ -105,28 +97,28 @@ def main():
     parser.add_argument('--loop_time', default=5,type=int)
     args=parser.parse_args()
 
-    ## ichao : this is the generator part, you can replace here using the generator you found  
+    ## This is the generator part
     g_all = nn.Sequential(OrderedDict([
         ('g_mapping', G_mapping()),
         #('truncation', Truncation(avg_latent)),
         ('g_synthesis', G_synthesis(resolution=args.resolution))    
     ]))
-    ## ichao : load the pretrained generator's weight
+    ## Load the pretrained generator's weight
     g_all.load_state_dict(torch.load(args.weight_file, map_location=device))
     g_all.eval()
     g_all.to(device)
     g_mapping, g_synthesis=g_all[0], g_all[1]
-    ## ichao : end of generator part
+    ## End of generator part
     
-    ## ichao : read the input image (size : 3x1024x1024)
+    ## Read the input image (size : 3x1024x1024)
     name=args.src_im.split(".")[0]
     img=image_reader(args.src_dir+args.src_im) #(1,3,1024,1024) -1~1
     img=img.to(device)
 
     MSE_Loss = nn.MSELoss(reduction="mean")
 
-    img_p=img.clone() ## ichao : used for perceptual loss
-    ## ichao : resize the image to put into VGG
+    img_p=img.clone() ## Used for perceptual loss
+    ## Resize the image to put into VGG
     upsample2d = torch.nn.Upsample(scale_factor=256/args.resolution, mode='bilinear') 
 
     img_p = upsample2d(img_p)
@@ -135,14 +127,14 @@ def main():
     perceptual_net = VGG16_for_Perceptual(n_layers=[2,4,14,21]).to(device)
 
     mean_w = get_mean_latent(g_mapping, device)
-    ## ichao : initialize the latent code we want to optimize
+    ## Initialize the latent code we want to optimize (using mean latent code as image2styleGAN)
     dlatent = mean_w
     dlatent = dlatent.requires_grad_()
     synth_img = g_synthesis(dlatent)
-    #dlatent = -2.0 * torch.randn((1,18,512), device=device) + 1.0
-    #dlatent = dlatent.requires_grad_()
+    # dlatent = -2.0 * torch.randn((1,18,512), device=device) + 1.0
+    # dlatent = dlatent.requires_grad_()
     
-    #optimizer = optim.Adam({dlatent}, lr=0.01)
+    # optimizer = optim.Adam({dlatent}, lr=0.01)
     # Latent code optimization
     loop_iteration = args.w_iteration + args.n_iteration
     print("Start")
@@ -179,6 +171,7 @@ def main():
 
                 np.save("latent_W/{}.npy".format(name),dlatent.detach().cpu().numpy())
         # Noise optimization
+        # With noise optimization can get more details
         print("============Noise Optimization============")
         dlatent.requires_grad = False
         noises = []
@@ -191,13 +184,13 @@ def main():
         optimizer=optim.Adam(noises,lr=5,betas=(0.9,0.999),eps=1e-8)
         for i in range(args.n_iteration):
             optimizer.zero_grad()
-            ## ichao : generate an image using the current latent code
-            #dlatent_ex= g_mapping(dlatent)
+            ## Generate an image using the current latent code
+            # dlatent_ex= g_mapping(dlatent)
             synth_img = g_synthesis(dlatent)
-            synth_img = (synth_img + 1.0) / 2.0 # Why
+            synth_img = (synth_img + 1.0) / 2.0 
             mse_loss , perceptual_loss = caluclate_loss(synth_img,img,perceptual_net,img_p,MSE_Loss,0,1,upsample2d)
             # adjust ratio to control the gradient part.
-            # atio = 0.8
+            # ratio = 0.8
             # loss = (1 - ratio) * mse_loss + ratio * perceptual_loss
             loss = mse_loss + perceptual_loss
             loss.backward()
@@ -228,10 +221,8 @@ def caluclate_loss(synth_img, img, perceptual_net, img_p, MSE_Loss, perceptual_m
     perceptual_loss+=MSE_Loss(synth_1,real_1)
     perceptual_loss+=MSE_Loss(synth_2,real_2)
     perceptual_loss+=MSE_Loss(synth_3,real_3)
-    #perceptual_loss+=MSE_Loss(synth_4,real_4)
-    #perceptual_loss+=MSE_Loss(synth_5,real_5)
-    #perceptual_loss+=MSE_Loss(synth_6,real_6)
-    return MSE_mue * mse_loss,perceptual_mue * perceptual_loss
+    
+    return MSE_mue * mse_loss, perceptual_mue * perceptual_loss
     
 if __name__ == "__main__":
     main()

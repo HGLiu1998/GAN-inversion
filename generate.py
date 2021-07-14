@@ -1,6 +1,5 @@
 import numpy as np 
 import matplotlib.pyplot as plt 
-## ichao : replace this to the styleGAN you found
 from stylegan_layers import  G_mapping,G_synthesis
 
 import argparse
@@ -9,7 +8,6 @@ import torch.nn as nn
 from collections import OrderedDict
 import torch.nn.functional as F
 from torchvision.utils import save_image
-#from perceptual_model import VGG16_for_Perceptual
 import torch.optim as optim
 from torchvision import transforms
 from PIL import Image 
