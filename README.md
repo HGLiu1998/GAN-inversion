@@ -7,5 +7,6 @@ Image2StyleGAN implementation
 * Execute image_inversion.py to start inversion.
 
 
-# StyleGAN Implementation and weight conversion(Reference):
+# StyleGAN Implementation (Reference)
+The pytorch implementation of styleGAN and weight conversion come from this reference:
 * https://github.com/lernapparat/lernapparat
